@@ -44,15 +44,60 @@ const c=document.querySelector("#c"),ctx=c.getContext("2d");
 const intro=document.querySelector("#intro"),stageEl=document.querySelector("#stage"),hint=document.querySelector("#hint"),quote=document.querySelector("#quote"),restart=document.querySelector("#restart"),memory=document.querySelector("#memory"),place=document.querySelector("#place");
 let W=innerWidth,H=innerHeight,dpr=1,t=0,running=false,mode=0,energy=0,mouse={x:-9999,y:-9999,vx:0,vy:0},lastMouse={x:0,y:0};
 let wind=[],water=[],seeds=[],plants=[],paths=[],people=[],houses=[],sparks=[],ripples=[];
-const LOCAL_MEMORY=[
- {min:1,max:1.9,ey:"EL VIENTO",fact:"Antes de la transformación productiva, el paisaje era un ambiente de estepa patagónica abierto al viento.",src:"Consejo Federal de Inversiones · Plan de Ordenamiento Territorial"},
- {min:2,max:2.9,ey:"EL AGUA",fact:"En 1969 comenzaron las obras de sistematización y los primeros cultivos fueron regados con agua tomada del río Neuquén.",src:"Municipalidad de San Patricio del Chañar · Identidad"},
- {min:3,max:3.9,ey:"DOMINAR EL AGUA",fact:"La primera bocatoma, construida en 1971, permitió iniciar la primera gran etapa de riego; el sistema convirtió parte del monte en territorio agrícola.",src:"Municipalidad de San Patricio del Chañar · Identidad"},
- {min:4,max:4.9,ey:"NACE EL PUEBLO",fact:"La localidad fue fundada el 21 de mayo de 1973 y la Comisión de Fomento comenzó a funcionar en 1974.",src:"Carta Orgánica Municipal · Art. 2 · Neuquén Informa"},
- {min:5,max:5.9,ey:"LAS CHACRAS",fact:"El sistema de riego permitió parcelar y poner en producción las tierras; en 1974 ya había miles de hectáreas bajo riego.",src:"Consejo Federal de Inversiones · historia territorial"},
- {min:6,max:6.9,ey:"VIDA",fact:"La infraestructura productiva hizo necesaria la creación de un núcleo urbano para quienes trabajaban en las chacras.",src:"Consejo Federal de Inversiones · historia territorial"},
- {min:7,max:7.9,ey:"CHAÑAR",fact:"Desde el desierto, el agua, el trabajo y la organización fueron construyendo un territorio productivo y, finalmente, un pueblo.",src:"Municipalidad de San Patricio del Chañar · Identidad · CFI · Neuquén"}
-];
+const WORLD_DATA={
+  project:{title:"CHAÑAR — EL UNIVERSO VIVO",place:"San Patricio del Chañar",region:"Neuquén · Patagonia"},
+  stages:[
+    {id:1,name:"VIENTO",action:"sentí el territorio",hint:"mové el dedo o el cursor y dejá que el viento responda"},
+    {id:2,name:"AGUA",action:"encontrá el agua",hint:"tocá el territorio: el agua despierta la tierra"},
+    {id:3,name:"TIERRA",action:"hacé fértil el suelo",hint:"tocá distintos lugares y hacé crecer la vida"},
+    {id:4,name:"VIDA",action:"sembrá y conectá",hint:"seguí interviniendo: cada gesto deja una huella"},
+    {id:5,name:"CAMINOS",action:"abrí un camino",hint:"arrastrá desde un lugar hasta otro para dibujar una conexión"},
+    {id:6,name:"PERSONAS",action:"hacé aparecer la comunidad",hint:"tocá: las personas llegan donde el territorio ya está conectado"},
+    {id:7,name:"PUEBLO",action:"San Patricio del Chañar",hint:"el universo continúa vivo"}
+  ],
+  facts:[
+    {min:1,max:1.9,ey:"EL VIENTO",fact:"Antes de la transformación productiva, este paisaje formaba parte de un ambiente de estepa patagónica abierto al viento.",source:"Marco territorial · CFI / documentación provincial"},
+    {min:2,max:2.9,ey:"EL AGUA",fact:"En 1969 comenzaron obras de sistematización y los primeros cultivos fueron regados con agua tomada del río Neuquén mediante bombeo.",source:"CFI · Estudio territorial de San Patricio del Chañar"},
+    {min:3,max:3.9,ey:"TRANSFORMAR EL AGUA",fact:"El riego fue la infraestructura decisiva para transformar tierras áridas en un territorio agrícola; las primeras obras se desarrollaron entre 1969 y los primeros años de la década de 1970.",source:"CFI · historia productiva; Gobierno del Neuquén"},
+    {min:4,max:4.9,ey:"NACE EL PUEBLO",fact:"San Patricio del Chañar fue fundado el 21 de mayo de 1973. La Comisión de Fomento comenzó a funcionar el 8 de abril de 1974.",source:"Gobierno del Neuquén · reseña histórica"},
+    {min:5,max:5.9,ey:"LAS CHACRAS",fact:"En 1974 el consorcio de riego registraba unas 4.000 hectáreas bajo riego por manto gravitacional, destinadas principalmente a frutales.",source:"CFI · Estudio territorial de San Patricio del Chañar"},
+    {min:6,max:6.9,ey:"TRABAJO Y PUEBLO",fact:"La creación del pueblo estuvo vinculada a la necesidad de alojar a la mano de obra que trabajaba en las chacras y acompañar la nueva organización productiva.",source:"CFI · historia territorial; Gobierno del Neuquén"},
+    {min:7,max:7.9,ey:"CHAÑAR",fact:"El territorio siguió transformándose: agricultura, fruticultura y luego vitivinicultura se sumaron a la historia productiva del valle.",source:"Gobierno del Neuquén · historia y producción"}
+  ],
+  sources:[
+    {name:"Gobierno del Neuquén · Neuquén Informa",url:"https://www.neuqueninforma.gob.ar/"},
+    {name:"Consejo Federal de Inversiones · CFI",url:"https://www.cfi.org.ar/"},
+    {name:"Municipalidad de San Patricio del Chañar",url:"https://sanpatriciodelchanar.gob.ar/"}
+  ]
+};
+const EXPERIENCE={
+  principle:"El visitante no mira cómo nace el pueblo: participa en la cadena de transformaciones que lo hace aparecer.",
+  sequence:"VIENTO → DESIERTO → AGUA → RIEGO → TIERRA PRODUCTIVA → CHACRAS → TRABAJO → PUEBLO → CHAÑAR",
+  interaction:{
+    1:"el movimiento altera el viento",
+    2:"el contacto despierta agua y semillas",
+    3:"cada toque hace crecer vida",
+    4:"la intervención acumula fertilidad",
+    5:"el arrastre dibuja caminos persistentes",
+    6:"los lugares conectados atraen personas",
+    7:"las conexiones hacen emerger el pueblo"
+  },
+  dream:{
+    rule:"profundidad invisible, frente sencillo",
+    visual:"aire, luz, agua, memoria, distancia, huellas y tiempo",
+    feeling:"descubrimiento → transformación → conexión → pertenencia"
+  }
+};
+function updateMemory(){
+  const item=WORLD_DATA.facts.find(x=>mode>=x.min&&mode<x.max+1)||WORLD_DATA.facts[WORLD_DATA.facts.length-1];
+  memory.querySelector(".ey").textContent=item.ey;
+  memory.querySelector(".fact").textContent=item.fact;
+  memory.querySelector(".src").textContent=item.source;
+  memory.classList.toggle("show",running&&mode>0);
+  place.querySelector(".name").textContent=WORLD_DATA.project.place;
+  place.querySelector(".sub").textContent=WORLD_DATA.project.region;
+  place.style.opacity=running?".72":"0";
+}
 function updateMemory(){
  const item=LOCAL_MEMORY.find(x=>mode>=x.min&&mode<x.max+1)||LOCAL_MEMORY[LOCAL_MEMORY.length-1];
  memory.querySelector(".ey").textContent=item.ey;
@@ -405,11 +450,16 @@ function frame(){t+=.016;ctx.clearRect(0,0,W,H);if(!running){requestAnimationFra
 frame();
 
 function setMode(m){
- mode=m;const names=["","VIENTO","AGUA","TIERRA","VIDA","CAMINOS","PERSONAS","PUEBLO"];
- stageEl.textContent=m?("0"+m+" · "+names[m]):"";
- hint.textContent=m===1?"mové el dedo o el cursor":m===5?"dibujá un camino entre dos lugares":"tocá · mové · dejá que el territorio responda";
- if(m>1)burst(W*.5,riverY(W*.5),Math.min(18,m*2),"dust"); updateMemory();
- if(m===7){quote.innerHTML="<strong>San Patricio del Chañar</strong><br><small>Un pueblo no aparece de repente.<br>Crece cuando las cosas empiezan a conectarse.</small>";quote.classList.add("show");hint.textContent="el universo continúa vivo"}
+ mode=m;
+ const current=WORLD_DATA.stages[m];
+ stageEl.textContent=current?("0"+m+" · "+current.name):"";
+ hint.textContent=current?current.hint:"";
+ if(m>1)burst(W*.5,riverY(W*.5),Math.min(18,m*2),"dust");
+ updateMemory();
+ if(m===7){
+   quote.innerHTML="<strong>San Patricio del Chañar</strong><br><small>Un pueblo no aparece de repente.<br>Crece cuando las cosas empiezan a conectarse.</small>";
+   quote.classList.add("show");
+ }
 }
 function next(){if(mode<7)setMode(mode+1)}
 function pointer(e){
@@ -431,7 +481,8 @@ addEventListener("pointerup",()=>{if(drawing&&pathStart&&mode===5&&Math.hypot(mo
 c.addEventListener("click",()=>{if(running&&mode<7&&mode!==5)next()});
 document.querySelector("#start").onclick=()=>{
  running=true;intro.classList.add("hide");stageEl.style.opacity=1;hint.style.opacity=1;restart.style.display="block";makeWind();makeWater();setMode(1);
- setTimeout(()=>setMode(2),8500);setTimeout(()=>setMode(3),16500);setTimeout(()=>setMode(4),24500);setTimeout(()=>setMode(5),33500);setTimeout(()=>setMode(6),43500);setTimeout(()=>setMode(7),55500)
+ const schedule=[8500,16500,24500,33500,43500,55500];
+ schedule.forEach((ms,i)=>setTimeout(()=>{if(running&&mode===i+1)setMode(i+2)},ms))
 };
 restart.onclick=()=>location.reload();
 </script>
