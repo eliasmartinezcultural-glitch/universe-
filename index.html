@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Chañar — El Universo Vivo</title>
+<style>
+:root{--bg:#05070a;--ink:#f4efe4;--muted:#9ca49b;--water:#72d6ff;--green:#9bd66d;--gold:#e9c46a}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font-family:system-ui,sans-serif;touch-action:none}
+canvas{position:fixed;inset:0;width:100%;height:100%}
+#ui{position:fixed;inset:0;display:grid;place-items:center;text-align:center;pointer-events:none;padding:24px;background:radial-gradient(circle at 50% 55%,transparent 15%,rgba(0,0,0,.48) 100%)}
+#intro{transition:1.3s}#intro.hide{opacity:0;transform:scale(.97);pointer-events:none}
+.k{font-size:10px;letter-spacing:.42em;text-transform:uppercase;color:var(--muted);margin-bottom:22px}
+h1{font-size:clamp(42px,9vw,96px);font-weight:350;letter-spacing:.16em;margin:0 0 18px}
+#msg{font-size:clamp(18px,3vw,30px);line-height:1.35;text-shadow:0 0 25px #000}
+button{pointer-events:auto;border:1px solid #ffffff44;background:#ffffff09;color:var(--ink);padding:13px 25px;border-radius:999px;letter-spacing:.25em;text-transform:uppercase;font-size:10px;cursor:pointer}
+#hint{position:fixed;bottom:30px;width:100%;text-align:center;color:#9da39b;font-size:10px;letter-spacing:.25em;text-transform:uppercase;opacity:.82}
+#stage{position:fixed;top:20px;left:22px;font-size:9px;letter-spacing:.25em;color:#747b73}
+#restart{position:fixed;top:16px;right:18px;background:none;border:0;color:#686e68;display:none}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui"><div id="intro"><div class="k">experiencia interactiva</div><h1>CHAÑAR</h1><div id="msg">Antes de ser pueblo, hubo territorio.</div><br><br><button id="start">Comenzar</button></div></div>
+<div id="stage"></div><div id="hint"></div><button id="restart">REINICIAR</button>
+<script>
+const c=document.querySelector('#c'),x=c.getContext('2d'),msg=document.querySelector('#msg'),intro=document.querySelector('#intro'),hint=document.querySelector('#hint'),stageText=document.querySelector('#stage'),restart=document.querySelector('#restart');
+let W,H,D,stage=0,started=false,t=0,pts=[],plants=[],paths=[],people=[],ripples=[],drag=false,last=null,flow=[],timers=[];
+function size(){D=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;c.width=W*D;c.height=H*D;x.setTransform(D,0,0,D,0,0)}addEventListener('resize',size);size();
+const R=(a,b)=>a+Math.random()*(b-a),P=(x,y,vx,vy,r)=>({x,y,vx,vy,r,a:R(.2,.9),s:Math.random()*20});
+function wind(){pts=Array.from({length:Math.min(1050,W*H/1050)},()=>P(R(0,W),R(0,H),R(.2,1.15),R(-.08,.08)))}
+function fertile(px,py){let d=Math.abs(py-(H*.72-(px-W*.12)*.22));return d<90}
+function render(){
+ t+=.016;x.clearRect(0,0,W,H);
+ if(!started){requestAnimationFrame(render);return}
+ let g=x.createRadialGradient(W*.5,H*.58,0,W*.5,H*.58,Math.max(W,H)*.72);g.addColorStop(0,'rgba(70,100,82,.16)');g.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=g;x.fillRect(0,0,W,H);
+ if(stage>=1)for(const p of pts){let dx=(last?last.x-p.x:0),dy=(last?last.y-p.y:0);p.x+=p.vx+Math.sin(t+p.s)*.12+dx*.001;p.y+=p.vy+Math.cos(t+p.s)*.06+dy*.001;if(p.x>W+5)p.x=-5;if(p.x<-5)p.x=W+5;x.fillStyle=`rgba(220,225,215,${p.a*.55})`;x.beginPath();x.arc(p.x,p.y,p.r,0,7);x.fill()}
+ if(stage>=2){x.save();x.lineCap='round';x.lineWidth=18;x.strokeStyle='#72d6ff12';x.beginPath();x.moveTo(W*.10,H*.75);x.bezierCurveTo(W*.30,H*.52,W*.40,H*.82,W*.55,H*.62);x.bezierCurveTo(W*.70,H*.45,W*.78,H*.68,W*.96,H*.49);x.stroke();x.lineWidth=2;x.strokeStyle='#72d6ffb8';x.stroke();x.restore()}
+ if(stage>=3)for(const p of plants){let s=Math.min(1,(t-p.b)*1.6);if(s<=0)continue;x.save();x.translate(p.x,p.y);x.rotate(Math.sin(t+p.x*.01)*.04);x.scale(s,s);x.strokeStyle='#9bd66daa';x.lineWidth=1.5;x.beginPath();x.moveTo(0,8);x.lineTo(0,-10);x.stroke();x.beginPath();x.arc(-4,-6,4,0,4.4);x.stroke();x.beginPath();x.arc(4,-2,4,3.2,7);x.stroke();x.restore()}
+ if(stage>=5)for(const p of paths){x.strokeStyle='#e9c46a77';x.lineWidth=2;x.beginPath();x.moveTo(p.a.x,p.a.y);x.lineTo(p.b.x,p.b.y);x.stroke();x.fillStyle='#e9c46a55';x.beginPath();x.arc(p.b.x,p.b.y,3,0,7);x.fill()}
+ if(stage>=6)for(const p of people){let q=1+Math.sin(t*2+p.s)*.2;x.shadowBlur=18;x.shadowColor='#f4efe455';x.fillStyle='#f4efe4cc';x.beginPath();x.arc(p.x,p.y,2.7*q,0,7);x.fill();x.shadowBlur=0}
+ for(const f of flow){f.x+=(f.tx-f.x)*.012;f.y+=(f.ty-f.y)*.012;f.a-=.006;x.fillStyle=`rgba(233,196,106,${f.a})`;x.beginPath();x.arc(f.x,f.y,1.5,0,7);x.fill()}flow=flow.filter(f=>f.a>0);
+ for(let i=ripples.length-1;i>=0;i--){let r=ripples[i];r.r+=1.5;r.a-=.018;x.strokeStyle=`rgba(114,214,255,${r.a})`;x.beginPath();x.arc(r.x,r.y,r.r,0,7);x.stroke();if(r.a<=0)ripples.splice(i,1)}
+ if(stage===7){x.fillStyle='rgba(233,196,106,.025)';x.fillRect(0,0,W,H)}
+ requestAnimationFrame(render)
+}
+render();
+const texts=['','Viento.','El agua transforma el territorio.','Donde algo puede crecer, aparece vida.','La tierra empieza a responder.','Los caminos conectan lo que antes estaba separado.','Cada luz representa una historia.','Todo empieza a estar conectado.'];
+const names=['','VIENTO','AGUA','TIERRA','VIDA','CAMINOS','PERSONAS','PUEBLO'];
+function setStage(s){
+ stage=s;stageText.textContent=s?`0${s} · ${names[s]}`:'';msg.textContent=texts[s]||'';hint.textContent=s===1?'mové el cursor o el dedo':'tocá · arrastrá · descubrí';
+ if(s===4){for(let i=0;i<35;i++){let px=R(W*.12,W*.92),py=R(H*.25,H*.82);if(fertile(px,py))plants.push({x:px,y:py,b:t+R(0,1)})}}
+ if(s===6){for(let i=0;i<7;i++){let p=paths[Math.max(0,paths.length-1-i)];if(p){people.push({x:p.b.x,y:p.b.y,s:Math.random()*10})}}}
+ if(s===7){msg.innerHTML='<strong>San Patricio del Chañar</strong><br><small style="color:#a7aaa2">Un pueblo construido por miles de pequeñas historias.</small>';hint.textContent='seguí moviéndote · el universo continúa vivo'}
+}
+function advance(){if(stage<7)setStage(stage+1)}
+function pos(e){return{x:e.clientX,y:e.clientY}}
+function act(e){
+ if(!started)return;let p=pos(e);
+ if(stage===1)for(let i=0;i<9;i++)pts.push(P(p.x,p.y,R(.3,1.3),R(-.4,.4),R(.5,2)));
+ if(stage===2){ripples.push({x:p.x,y:p.y,r:2,a:.55});for(let i=0;i<3;i++){let px=R(W*.2,W*.8),py=R(H*.45,H*.75);if(fertile(px,py))plants.push({x:px,y:py,b:t+R(.2,1)})}}
+ if(stage===3||stage===4){for(let i=0;i<2;i++)plants.push({x:p.x+R(-28,28),y:p.y+R(-22,22),b:t})}
+ if(stage===5&&last&&Math.hypot(p.x-last.x,p.y-last.y)>18){paths.push({a:last,b:p});for(let i=0;i<4;i++)flow.push({x:last.x,y:last.y,tx:p.x,ty:p.y,a:.7})}
+ if(stage===6)people.push({x:p.x,y:p.y,s:Math.random()*10});
+ if(stage===7)ripples.push({x:p.x,y:p.y,r:2,a:.3})
+}
+c.addEventListener('pointerdown',e=>{drag=true;last=pos(e);act(e)});
+c.addEventListener('pointermove',e=>{if(!started)return;let p=pos(e);if(drag&&stage===5)act(e);else if(Math.random()<.18)act(e);last=p});
+addEventListener('pointerup',()=>{drag=false;last=null});
+function start(){started=true;intro.classList.add('hide');restart.style.display='block';wind();setStage(1);timers=[6,12,18,24,30,36].map((sec,i)=>setTimeout(()=>setStage(i+2),sec*1000))}
+document.querySelector('#start').onclick=start;
+restart.onclick=()=>location.reload();
+c.addEventListener('click',()=>{if(started&&stage<7){timers.forEach(clearTimeout);advance()}});
+</script>
+</body></html>
