@@ -54,6 +54,64 @@ function drawBackground(){
  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
  if(level>.15){const glow=ctx.createRadialGradient(W*.53,riverY(W*.53),0,W*.53,riverY(W*.53),W*.45);glow.addColorStop(0,"rgba(80,170,188,"+(.025+.05*level)+")");glow.addColorStop(1,"rgba(0,0,0,0)");ctx.fillStyle=glow;ctx.fillRect(0,0,W,H)}
 }
+function drawLandscape(){
+ const level=worldLevel();
+ // Distant relief: depth only, never changes the interaction model.
+ ctx.save();
+ const horizon=H*.47;
+ ctx.globalAlpha=.16+.10*level;
+ ctx.fillStyle="rgba(39,52,49,1)";
+ ctx.beginPath();
+ ctx.moveTo(0,horizon+45);
+ for(let x=0;x<=W+40;x+=40){
+   const y=horizon-18*Math.sin(x*.004+1.4)-14*Math.sin(x*.011)+18*Math.sin(x*.021);
+   ctx.lineTo(x,y);
+ }
+ ctx.lineTo(W,H);ctx.lineTo(0,H);ctx.closePath();ctx.fill();
+ ctx.globalAlpha=.10+.08*level;
+ ctx.fillStyle="rgba(122,135,108,1)";
+ ctx.beginPath();
+ ctx.moveTo(0,horizon+82);
+ for(let x=0;x<=W+40;x+=32){
+   const y=horizon+35-11*Math.sin(x*.006)-9*Math.sin(x*.018+.7);
+   ctx.lineTo(x,y);
+ }
+ ctx.lineTo(W,H);ctx.lineTo(0,H);ctx.closePath();ctx.fill();
+ // A very restrained celestial anchor gives the territory a sense of time.
+ const orbX=W*(.18+.58*level), orbY=H*(.18+.08*Math.sin(t*.025));
+ const orb=ctx.createRadialGradient(orbX,orbY,0,orbX,orbY,75+80*level);
+ orb.addColorStop(0,"rgba(224,205,151,"+(.07+.06*level)+")");
+ orb.addColorStop(1,"rgba(224,205,151,0)");
+ ctx.fillStyle=orb;ctx.fillRect(orbX-160,orbY-160,320,320);
+ ctx.restore();
+}
+
+function drawAtmosphere(){
+ const level=worldLevel();
+ // Thin environmental layers: depth, air and continuity.
+ ctx.save();
+ const horizon=riverY(W*.52);
+ const fog=ctx.createLinearGradient(0,horizon-90,0,horizon+130);
+ fog.addColorStop(0,"rgba(155,178,163,0)");
+ fog.addColorStop(.5,"rgba(155,178,163,"+(.012+.025*level)+")");
+ fog.addColorStop(1,"rgba(155,178,163,0)");
+ ctx.fillStyle=fog;ctx.fillRect(0,horizon-110,W,250);
+ for(let i=0;i<18;i++){
+   const x=(i*137.37+t*(2+i*.08))%(W+120)-60;
+   const y=H*(.14+(i%7)*.105)+Math.sin(t*.18+i)*10;
+   const r=1.2+(i%4)*.7;
+   ctx.fillStyle="rgba(205,213,192,"+(.025+.025*level)+")";
+   ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.fill();
+ }
+ if(running && mouse.x>-1000){
+   const g=ctx.createRadialGradient(mouse.x,mouse.y,0,mouse.x,mouse.y,115);
+   g.addColorStop(0,"rgba(224,218,190,"+(.045+.035*level)+")");
+   g.addColorStop(1,"rgba(224,218,190,0)");
+   ctx.fillStyle=g;ctx.fillRect(mouse.x-130,mouse.y-130,260,260);
+ }
+ ctx.restore();
+}
+
 function drawWind(){
  for(const p of wind){let dx=mouse.x-p.x,dy=mouse.y-p.y,dist=Math.hypot(dx,dy);if(dist<150&&dist>1){p.vx+=dx/dist*.006;p.vy+=dy/dist*.006}p.x+=p.vx;p.y+=p.vy+Math.sin(t*.7+p.x*.006)*.08;if(p.x>W+40)p.x=-40;if(p.y<-30)p.y=H+30;if(p.y>H+30)p.y=-30;ctx.strokeStyle="rgba(215,221,210,"+(p.a*(.45+worldLevel()*.35))+")";ctx.lineWidth=.55;ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(p.x-p.l,p.y-p.vy*8);ctx.stroke()}
 }
@@ -71,6 +129,29 @@ function drawSeeds(){
 function drawPaths(){
  for(const p of paths){let pulse=.55+.25*Math.sin(t*2+p.a.x*.01);ctx.strokeStyle="rgba(230,194,103,"+(.2+pulse*.45)+")";ctx.lineWidth=1.1;ctx.beginPath();ctx.moveTo(p.a.x,p.a.y);ctx.quadraticCurveTo((p.a.x+p.b.x)/2,(p.a.y+p.b.y)/2-20,p.b.x,p.b.y);ctx.stroke();ctx.fillStyle="rgba(244,221,145,.55)";ctx.beginPath();ctx.arc(p.a.x,p.a.y,1.8,0,TAU);ctx.fill();ctx.beginPath();ctx.arc(p.b.x,p.b.y,1.8,0,TAU);ctx.fill()}
 }
+function drawConnections(){
+ const level=worldLevel();
+ if(level<.55)return;
+ ctx.save();
+ ctx.lineWidth=.55;
+ for(const h of houses){
+   let nearest=null,dist=Infinity;
+   for(const p of people){
+     const d=Math.hypot(p.x-h.x,p.y-h.y);
+     if(d<dist){dist=d;nearest=p}
+   }
+   if(nearest&&dist<150){
+     ctx.strokeStyle="rgba(232,207,151,"+(.10+.10*level)+")";
+     ctx.beginPath();ctx.moveTo(h.x,h.y);ctx.lineTo(nearest.x,nearest.y);ctx.stroke();
+   }
+ }
+ for(const p of paths){
+   ctx.strokeStyle="rgba(205,219,181,"+(.035+.045*level)+")";
+   ctx.beginPath();ctx.moveTo(p.a.x,p.a.y);ctx.lineTo(p.b.x,p.b.y);ctx.stroke();
+ }
+ ctx.restore();
+}
+
 function drawPeople(){
  for(const p of people){let q=1+Math.sin(t*1.8+p.s)*.16;ctx.shadowBlur=20;ctx.shadowColor="rgba(239,215,157,.35)";ctx.fillStyle="rgba(244,229,191,.86)";ctx.beginPath();ctx.arc(p.x,p.y,p.r*q,0,TAU);ctx.fill();ctx.shadowBlur=0}
 }
@@ -90,13 +171,14 @@ function evolve(){
  if(l>.48&&people.length<14&&Math.random()<.0025){let p=paths[Math.floor(Math.random()*paths.length)];if(p)addPerson(p.b.x,p.b.y)}
  if(l>.68&&houses.length<7&&Math.random()<.0015){let p=people[Math.floor(Math.random()*people.length)];if(p)houseAt(p.x+rand(-32,32),p.y+rand(-25,25))}
 }
-function frame(){t+=.016;ctx.clearRect(0,0,W,H);if(!running){requestAnimationFrame(frame);return}drawBackground();drawWind();drawRiver();drawSeeds();drawPlants();drawPaths();drawPeople();drawHouses();drawSparks();drawRipples();evolve();requestAnimationFrame(frame)}
+function frame(){t+=.016;ctx.clearRect(0,0,W,H);if(!running){requestAnimationFrame(frame);return}drawBackground();drawLandscape();drawWind();drawRiver();drawSeeds();drawPlants();drawPaths();drawPeople();drawConnections();drawHouses();drawSparks();drawRipples();drawAtmosphere();evolve();requestAnimationFrame(frame)}
 frame();
 
 function setMode(m){
  mode=m;const names=["","VIENTO","AGUA","TIERRA","VIDA","CAMINOS","PERSONAS","PUEBLO"];
  stageEl.textContent=m?("0"+m+" · "+names[m]):"";
  hint.textContent=m===1?"mové el dedo o el cursor":m===5?"dibujá un camino entre dos lugares":"tocá · mové · dejá que el territorio responda";
+ if(m>1)burst(W*.5,riverY(W*.5),Math.min(18,m*2),"dust");
  if(m===7){quote.innerHTML="<strong>San Patricio del Chañar</strong><br><small>Un pueblo no aparece de repente.<br>Crece cuando las cosas empiezan a conectarse.</small>";quote.classList.add("show");hint.textContent="el universo continúa vivo"}
 }
 function next(){if(mode<7)setMode(mode+1)}
