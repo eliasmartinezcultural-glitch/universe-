@@ -1,74 +1,127 @@
 <!doctype html>
 <html lang="es">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Chañar — El Universo Vivo</title>
 <style>
-:root{--bg:#05070a;--ink:#f4efe4;--muted:#9ca49b;--water:#72d6ff;--green:#9bd66d;--gold:#e9c46a}
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font-family:system-ui,sans-serif;touch-action:none}
+:root{--paper:#efe9dc;--dim:#a9aa9e}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#030508;color:var(--paper);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;touch-action:none}
 canvas{position:fixed;inset:0;width:100%;height:100%}
-#ui{position:fixed;inset:0;display:grid;place-items:center;text-align:center;pointer-events:none;padding:24px;background:radial-gradient(circle at 50% 55%,transparent 15%,rgba(0,0,0,.48) 100%)}
-#intro{transition:1.3s}#intro.hide{opacity:0;transform:scale(.97);pointer-events:none}
-.k{font-size:10px;letter-spacing:.42em;text-transform:uppercase;color:var(--muted);margin-bottom:22px}
-h1{font-size:clamp(42px,9vw,96px);font-weight:350;letter-spacing:.16em;margin:0 0 18px}
-#msg{font-size:clamp(18px,3vw,30px);line-height:1.35;text-shadow:0 0 25px #000}
-button{pointer-events:auto;border:1px solid #ffffff44;background:#ffffff09;color:var(--ink);padding:13px 25px;border-radius:999px;letter-spacing:.25em;text-transform:uppercase;font-size:10px;cursor:pointer}
-#hint{position:fixed;bottom:30px;width:100%;text-align:center;color:#9da39b;font-size:10px;letter-spacing:.25em;text-transform:uppercase;opacity:.82}
-#stage{position:fixed;top:20px;left:22px;font-size:9px;letter-spacing:.25em;color:#747b73}
-#restart{position:fixed;top:16px;right:18px;background:none;border:0;color:#686e68;display:none}
+#veil{position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle at 50% 48%,transparent 0 28%,rgba(0,0,0,.24) 70%,rgba(0,0,0,.72));mix-blend-mode:multiply}
+#intro{position:fixed;inset:0;display:grid;place-items:center;text-align:center;padding:25px;transition:1.5s;pointer-events:none}
+#intro.hide{opacity:0;transform:scale(1.035);filter:blur(8px)}
+.k{font-size:9px;letter-spacing:.48em;text-transform:uppercase;color:#a4aaa1;margin-bottom:24px}
+h1{font-size:clamp(48px,10vw,118px);font-weight:300;letter-spacing:.19em;margin:0 0 20px;text-shadow:0 0 55px rgba(230,210,160,.12)}
+#intro p{font-size:clamp(17px,2.7vw,27px);margin:0;line-height:1.45;color:#d9d5ca}
+#start{margin-top:34px;pointer-events:auto;background:transparent;border:1px solid #ffffff32;color:#ddd8cc;border-radius:99px;padding:13px 26px;font-size:9px;letter-spacing:.3em;text-transform:uppercase}
+#start:hover{background:#ffffff0b}
+#stage{position:fixed;left:22px;top:19px;font-size:8px;letter-spacing:.3em;color:#777d77;text-transform:uppercase;opacity:0;transition:1s}
+#hint{position:fixed;bottom:25px;width:100%;text-align:center;font-size:8px;letter-spacing:.32em;text-transform:uppercase;color:#7e857e;opacity:0;transition:1s}
+#restart{position:fixed;right:17px;top:14px;border:0;background:none;color:#626861;font-size:8px;letter-spacing:.22em;display:none}
+#quote{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;width:min(680px,86vw);font-size:clamp(18px,3vw,31px);line-height:1.35;opacity:0;pointer-events:none;transition:1.8s;text-shadow:0 2px 30px #000}
+#quote.show{opacity:1}
+small{font-size:.45em;letter-spacing:.08em;color:#a6aaa2}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="ui"><div id="intro"><div class="k">experiencia interactiva</div><h1>CHAÑAR</h1><div id="msg">Antes de ser pueblo, hubo territorio.</div><br><br><button id="start">Comenzar</button></div></div>
-<div id="stage"></div><div id="hint"></div><button id="restart">REINICIAR</button>
+<div id="veil"></div>
+<div id="intro"><div><div class="k">experiencia audiovisual interactiva</div><h1>CHAÑAR</h1><p>Antes de ser pueblo, hubo territorio.</p><button id="start">Entrar</button></div></div>
+<div id="stage"></div><div id="hint"></div><div id="quote"></div><button id="restart">REINICIAR</button>
 <script>
-const c=document.querySelector('#c'),x=c.getContext('2d'),msg=document.querySelector('#msg'),intro=document.querySelector('#intro'),hint=document.querySelector('#hint'),stageText=document.querySelector('#stage'),restart=document.querySelector('#restart');
-let W,H,D,stage=0,started=false,t=0,pts=[],plants=[],paths=[],people=[],ripples=[],drag=false,last=null,flow=[],timers=[];
-function size(){D=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;c.width=W*D;c.height=H*D;x.setTransform(D,0,0,D,0,0)}addEventListener('resize',size);size();
-const R=(a,b)=>a+Math.random()*(b-a),P=(x,y,vx,vy,r)=>({x,y,vx,vy,r,a:R(.2,.9),s:Math.random()*20});
-function wind(){pts=Array.from({length:Math.min(1050,W*H/1050)},()=>P(R(0,W),R(0,H),R(.2,1.15),R(-.08,.08)))}
-function fertile(px,py){let d=Math.abs(py-(H*.72-(px-W*.12)*.22));return d<90}
-function render(){
- t+=.016;x.clearRect(0,0,W,H);
- if(!started){requestAnimationFrame(render);return}
- let g=x.createRadialGradient(W*.5,H*.58,0,W*.5,H*.58,Math.max(W,H)*.72);g.addColorStop(0,'rgba(70,100,82,.16)');g.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=g;x.fillRect(0,0,W,H);
- if(stage>=1)for(const p of pts){let dx=(last?last.x-p.x:0),dy=(last?last.y-p.y:0);p.x+=p.vx+Math.sin(t+p.s)*.12+dx*.001;p.y+=p.vy+Math.cos(t+p.s)*.06+dy*.001;if(p.x>W+5)p.x=-5;if(p.x<-5)p.x=W+5;x.fillStyle=`rgba(220,225,215,${p.a*.55})`;x.beginPath();x.arc(p.x,p.y,p.r,0,7);x.fill()}
- if(stage>=2){x.save();x.lineCap='round';x.lineWidth=18;x.strokeStyle='#72d6ff12';x.beginPath();x.moveTo(W*.10,H*.75);x.bezierCurveTo(W*.30,H*.52,W*.40,H*.82,W*.55,H*.62);x.bezierCurveTo(W*.70,H*.45,W*.78,H*.68,W*.96,H*.49);x.stroke();x.lineWidth=2;x.strokeStyle='#72d6ffb8';x.stroke();x.restore()}
- if(stage>=3)for(const p of plants){let s=Math.min(1,(t-p.b)*1.6);if(s<=0)continue;x.save();x.translate(p.x,p.y);x.rotate(Math.sin(t+p.x*.01)*.04);x.scale(s,s);x.strokeStyle='#9bd66daa';x.lineWidth=1.5;x.beginPath();x.moveTo(0,8);x.lineTo(0,-10);x.stroke();x.beginPath();x.arc(-4,-6,4,0,4.4);x.stroke();x.beginPath();x.arc(4,-2,4,3.2,7);x.stroke();x.restore()}
- if(stage>=5)for(const p of paths){x.strokeStyle='#e9c46a77';x.lineWidth=2;x.beginPath();x.moveTo(p.a.x,p.a.y);x.lineTo(p.b.x,p.b.y);x.stroke();x.fillStyle='#e9c46a55';x.beginPath();x.arc(p.b.x,p.b.y,3,0,7);x.fill()}
- if(stage>=6)for(const p of people){let q=1+Math.sin(t*2+p.s)*.2;x.shadowBlur=18;x.shadowColor='#f4efe455';x.fillStyle='#f4efe4cc';x.beginPath();x.arc(p.x,p.y,2.7*q,0,7);x.fill();x.shadowBlur=0}
- for(const f of flow){f.x+=(f.tx-f.x)*.012;f.y+=(f.ty-f.y)*.012;f.a-=.006;x.fillStyle=`rgba(233,196,106,${f.a})`;x.beginPath();x.arc(f.x,f.y,1.5,0,7);x.fill()}flow=flow.filter(f=>f.a>0);
- for(let i=ripples.length-1;i>=0;i--){let r=ripples[i];r.r+=1.5;r.a-=.018;x.strokeStyle=`rgba(114,214,255,${r.a})`;x.beginPath();x.arc(r.x,r.y,r.r,0,7);x.stroke();if(r.a<=0)ripples.splice(i,1)}
- if(stage===7){x.fillStyle='rgba(233,196,106,.025)';x.fillRect(0,0,W,H)}
- requestAnimationFrame(render)
+const c=document.querySelector("#c"),ctx=c.getContext("2d");
+const intro=document.querySelector("#intro"),stageEl=document.querySelector("#stage"),hint=document.querySelector("#hint"),quote=document.querySelector("#quote"),restart=document.querySelector("#restart");
+let W=innerWidth,H=innerHeight,dpr=1,t=0,running=false,mode=0,energy=0,mouse={x:-9999,y:-9999,vx:0,vy:0},lastMouse={x:0,y:0};
+let wind=[],water=[],seeds=[],plants=[],paths=[],people=[],houses=[],sparks=[],ripples=[];
+const TAU=Math.PI*2,rand=(a,b)=>a+Math.random()*(b-a),clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+function resize(){dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;c.width=W*dpr;c.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0)}addEventListener("resize",resize);resize();
+function riverY(px){const u=px/W;return H*(.72-.23*u+.045*Math.sin(u*8+.4))}
+function nearRiver(px,py){return Math.abs(py-riverY(px))<72}
+function burst(x,y,n,type){type=type||"dust";for(let i=0;i<n;i++)sparks.push({x:x,y:y,vx:rand(-1.4,1.4),vy:rand(-1.4,1.4),life:1,size:rand(.5,2.3),type:type})}
+function makeWind(){wind=[];const n=Math.min(1200,Math.floor(W*H/850));for(let i=0;i<n;i++)wind.push({x:rand(0,W),y:rand(0,H),vx:rand(.15,1.1),vy:rand(-.08,.08),a:rand(.08,.55),l:rand(10,34)})}
+function makeWater(){water=[];for(let i=0;i<150;i++){let xx=rand(0,W),yy=riverY(xx)+rand(-8,8);water.push({x:xx,y:yy,s:rand(.2,1),a:rand(.2,.7)})}}
+function addSeed(x,y,amount){amount=amount||1;for(let i=0;i<amount;i++){let px=x+rand(-32,32),py=y+rand(-24,24);if(nearRiver(px,py)||energy>7)seeds.push({x:px,y:py,b:t+rand(0,.8),life:rand(8,18)})}}
+function grow(x,y,n){n=n||1;for(let i=0;i<n;i++){let p={x:x+rand(-28,28),y:y+rand(-22,22),b:t+rand(0,.6),h:rand(7,22),phase:rand(0,TAU)};plants.push(p);burst(p.x,p.y,4,"green")}energy+=.7}
+function addPerson(x,y){people.push({x:x,y:y,b:t,s:rand(0,TAU),r:rand(2.1,3.2)});energy+=1.2;burst(x,y,12,"gold")}
+function addPath(a,b){if(Math.hypot(a.x-b.x,a.y-b.y)<25)return;paths.push({a:{x:a.x,y:a.y},b:{x:b.x,y:b.y},life:1});for(let i=0;i<18;i++)sparks.push({x:a.x,y:a.y,tx:b.x,ty:b.y,life:1,size:rand(.7,1.8),type:"path"});energy+=2;if(paths.length%2===0&&!people.some(p=>Math.hypot(p.x-b.x,p.y-b.y)<35))addPerson(b.x,b.y)}
+function houseAt(x,y){if(houses.some(h=>Math.hypot(h.x-x,h.y-y)<75))return;houses.push({x:x,y:y,b:t,s:rand(0,TAU),size:rand(11,20)});burst(x,y,28,"house");energy+=3}
+function worldLevel(){return clamp(energy/34,0,1)}
+function drawBackground(){
+ const level=worldLevel(),g=ctx.createRadialGradient(W*.48,H*.5,0,W*.5,H*.5,Math.max(W,H)*.75);
+ g.addColorStop(0,"rgba(76,94,79,"+(.10+.11*level)+")");g.addColorStop(.5,"rgba(33,50,48,"+(.07+.06*level)+")");g.addColorStop(1,"rgba(0,0,0,0)");
+ ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+ if(level>.15){const glow=ctx.createRadialGradient(W*.53,riverY(W*.53),0,W*.53,riverY(W*.53),W*.45);glow.addColorStop(0,"rgba(80,170,188,"+(.025+.05*level)+")");glow.addColorStop(1,"rgba(0,0,0,0)");ctx.fillStyle=glow;ctx.fillRect(0,0,W,H)}
 }
-render();
-const texts=['','Viento.','El agua transforma el territorio.','Donde algo puede crecer, aparece vida.','La tierra empieza a responder.','Los caminos conectan lo que antes estaba separado.','Cada luz representa una historia.','Todo empieza a estar conectado.'];
-const names=['','VIENTO','AGUA','TIERRA','VIDA','CAMINOS','PERSONAS','PUEBLO'];
-function setStage(s){
- stage=s;stageText.textContent=s?`0${s} · ${names[s]}`:'';msg.textContent=texts[s]||'';hint.textContent=s===1?'mové el cursor o el dedo':'tocá · arrastrá · descubrí';
- if(s===4){for(let i=0;i<35;i++){let px=R(W*.12,W*.92),py=R(H*.25,H*.82);if(fertile(px,py))plants.push({x:px,y:py,b:t+R(0,1)})}}
- if(s===6){for(let i=0;i<7;i++){let p=paths[Math.max(0,paths.length-1-i)];if(p){people.push({x:p.b.x,y:p.b.y,s:Math.random()*10})}}}
- if(s===7){msg.innerHTML='<strong>San Patricio del Chañar</strong><br><small style="color:#a7aaa2">Un pueblo construido por miles de pequeñas historias.</small>';hint.textContent='seguí moviéndote · el universo continúa vivo'}
+function drawWind(){
+ for(const p of wind){let dx=mouse.x-p.x,dy=mouse.y-p.y,dist=Math.hypot(dx,dy);if(dist<150&&dist>1){p.vx+=dx/dist*.006;p.vy+=dy/dist*.006}p.x+=p.vx;p.y+=p.vy+Math.sin(t*.7+p.x*.006)*.08;if(p.x>W+40)p.x=-40;if(p.y<-30)p.y=H+30;if(p.y>H+30)p.y=-30;ctx.strokeStyle="rgba(215,221,210,"+(p.a*(.45+worldLevel()*.35))+")";ctx.lineWidth=.55;ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(p.x-p.l,p.y-p.vy*8);ctx.stroke()}
 }
-function advance(){if(stage<7)setStage(stage+1)}
-function pos(e){return{x:e.clientX,y:e.clientY}}
-function act(e){
- if(!started)return;let p=pos(e);
- if(stage===1)for(let i=0;i<9;i++)pts.push(P(p.x,p.y,R(.3,1.3),R(-.4,.4),R(.5,2)));
- if(stage===2){ripples.push({x:p.x,y:p.y,r:2,a:.55});for(let i=0;i<3;i++){let px=R(W*.2,W*.8),py=R(H*.45,H*.75);if(fertile(px,py))plants.push({x:px,y:py,b:t+R(.2,1)})}}
- if(stage===3||stage===4){for(let i=0;i<2;i++)plants.push({x:p.x+R(-28,28),y:p.y+R(-22,22),b:t})}
- if(stage===5&&last&&Math.hypot(p.x-last.x,p.y-last.y)>18){paths.push({a:last,b:p});for(let i=0;i<4;i++)flow.push({x:last.x,y:last.y,tx:p.x,ty:p.y,a:.7})}
- if(stage===6)people.push({x:p.x,y:p.y,s:Math.random()*10});
- if(stage===7)ripples.push({x:p.x,y:p.y,r:2,a:.3})
+function drawRiver(){
+ ctx.save();ctx.lineCap="round";ctx.beginPath();ctx.moveTo(-30,riverY(-30));ctx.bezierCurveTo(W*.28,H*.49,W*.47,H*.78,W*.66,H*.56);ctx.bezierCurveTo(W*.8,H*.42,W*.92,H*.62,W+30,riverY(W+30));
+ ctx.strokeStyle="rgba(72,173,205,.07)";ctx.lineWidth=42;ctx.stroke();ctx.strokeStyle="rgba(104,202,231,.13)";ctx.lineWidth=15;ctx.stroke();ctx.strokeStyle="rgba(126,215,235,.65)";ctx.lineWidth=1.2;ctx.stroke();
+ for(const p of water){p.x+=p.s*(.55+worldLevel());p.y=riverY(p.x)+Math.sin(t*1.8+p.x*.015)*5;if(p.x>W+5)p.x=-5;ctx.fillStyle="rgba(150,226,240,"+p.a+")";ctx.fillRect(p.x,p.y,rand(3,10),.6)}ctx.restore()
 }
-c.addEventListener('pointerdown',e=>{drag=true;last=pos(e);act(e)});
-c.addEventListener('pointermove',e=>{if(!started)return;let p=pos(e);if(drag&&stage===5)act(e);else if(Math.random()<.18)act(e);last=p});
-addEventListener('pointerup',()=>{drag=false;last=null});
-function start(){started=true;intro.classList.add('hide');restart.style.display='block';wind();setStage(1);timers=[6,12,18,24,30,36].map((sec,i)=>setTimeout(()=>setStage(i+2),sec*1000))}
-document.querySelector('#start').onclick=start;
+function drawPlants(){
+ for(const p of plants){let k=clamp((t-p.b)*.8,0,1),s=k*k;if(!s)continue;ctx.save();ctx.translate(p.x,p.y);ctx.rotate(Math.sin(t+p.phase)*.04);ctx.globalAlpha=s;ctx.strokeStyle="rgba(151,209,111,.82)";ctx.lineWidth=1.15;ctx.beginPath();ctx.moveTo(0,7);ctx.lineTo(0,-p.h*s);ctx.stroke();ctx.beginPath();ctx.ellipse(-3,-p.h*.55,4,2.1,-.45,0,TAU);ctx.stroke();ctx.beginPath();ctx.ellipse(3,-p.h*.28,4,2.1,.45,0,TAU);ctx.stroke();ctx.restore()}
+}
+function drawSeeds(){
+ for(let i=seeds.length-1;i>=0;i--){let s=seeds[i],k=clamp(1-(t-s.b)/s.life,0,1);if(k<=0){seeds.splice(i,1);continue}ctx.fillStyle="rgba(201,215,163,"+(k*.25)+")";ctx.beginPath();ctx.arc(s.x,s.y,1.2+k*3,0,TAU);ctx.fill()}
+}
+function drawPaths(){
+ for(const p of paths){let pulse=.55+.25*Math.sin(t*2+p.a.x*.01);ctx.strokeStyle="rgba(230,194,103,"+(.2+pulse*.45)+")";ctx.lineWidth=1.1;ctx.beginPath();ctx.moveTo(p.a.x,p.a.y);ctx.quadraticCurveTo((p.a.x+p.b.x)/2,(p.a.y+p.b.y)/2-20,p.b.x,p.b.y);ctx.stroke();ctx.fillStyle="rgba(244,221,145,.55)";ctx.beginPath();ctx.arc(p.a.x,p.a.y,1.8,0,TAU);ctx.fill();ctx.beginPath();ctx.arc(p.b.x,p.b.y,1.8,0,TAU);ctx.fill()}
+}
+function drawPeople(){
+ for(const p of people){let q=1+Math.sin(t*1.8+p.s)*.16;ctx.shadowBlur=20;ctx.shadowColor="rgba(239,215,157,.35)";ctx.fillStyle="rgba(244,229,191,.86)";ctx.beginPath();ctx.arc(p.x,p.y,p.r*q,0,TAU);ctx.fill();ctx.shadowBlur=0}
+}
+function drawHouses(){
+ for(const h of houses){let k=clamp((t-h.b)*.7,0,1),s=k*k;ctx.save();ctx.translate(h.x,h.y);ctx.globalAlpha=s*.8;ctx.strokeStyle="rgba(232,204,145,.55)";ctx.lineWidth=1;ctx.beginPath();ctx.rect(-h.size*.65,-h.size*.45,h.size*1.3,h.size*.9);ctx.stroke();ctx.beginPath();ctx.moveTo(-h.size*.82,-h.size*.45);ctx.lineTo(0,-h.size*.95);ctx.lineTo(h.size*.82,-h.size*.45);ctx.stroke();ctx.restore()}
+}
+function drawSparks(){
+ for(let i=sparks.length-1;i>=0;i--){let s=sparks[i];if(s.type==="path"){s.x+=(s.tx-s.x)*.025;s.y+=(s.ty-s.y)*.025}else{s.x+=s.vx;s.y+=s.vy;s.vx*=.985;s.vy*=.985}s.life-=.012;let alpha=clamp(s.life,0,1),col=s.type==="green"?"151,209,111":(s.type==="gold"||s.type==="house"?"235,204,126":"210,220,212");ctx.fillStyle="rgba("+col+","+alpha*.65+")";ctx.beginPath();ctx.arc(s.x,s.y,s.size,0,TAU);ctx.fill();if(s.life<=0)sparks.splice(i,1)}
+}
+function drawRipples(){
+ for(let i=ripples.length-1;i>=0;i--){let r=ripples[i];r.r+=1.4;r.a-=.015;ctx.strokeStyle="rgba(116,213,231,"+r.a+")";ctx.lineWidth=.7;ctx.beginPath();ctx.arc(r.x,r.y,r.r,0,TAU);ctx.stroke();if(r.a<=0)ripples.splice(i,1)}
+}
+function evolve(){
+ let l=worldLevel();
+ if(l>.12&&seeds.length<55&&Math.random()<.012)addSeed(rand(W*.12,W*.9),rand(H*.25,H*.85),1);
+ if(l>.28&&plants.length<90&&Math.random()<.006){let px=rand(W*.08,W*.92),py=riverY(px)+rand(-90,90);grow(px,py,1)}
+ if(l>.48&&people.length<14&&Math.random()<.0025){let p=paths[Math.floor(Math.random()*paths.length)];if(p)addPerson(p.b.x,p.b.y)}
+ if(l>.68&&houses.length<7&&Math.random()<.0015){let p=people[Math.floor(Math.random()*people.length)];if(p)houseAt(p.x+rand(-32,32),p.y+rand(-25,25))}
+}
+function frame(){t+=.016;ctx.clearRect(0,0,W,H);if(!running){requestAnimationFrame(frame);return}drawBackground();drawWind();drawRiver();drawSeeds();drawPlants();drawPaths();drawPeople();drawHouses();drawSparks();drawRipples();evolve();requestAnimationFrame(frame)}
+frame();
+
+function setMode(m){
+ mode=m;const names=["","VIENTO","AGUA","TIERRA","VIDA","CAMINOS","PERSONAS","PUEBLO"];
+ stageEl.textContent=m?("0"+m+" · "+names[m]):"";
+ hint.textContent=m===1?"mové el dedo o el cursor":m===5?"dibujá un camino entre dos lugares":"tocá · mové · dejá que el territorio responda";
+ if(m===7){quote.innerHTML="<strong>San Patricio del Chañar</strong><br><small>Un pueblo no aparece de repente.<br>Crece cuando las cosas empiezan a conectarse.</small>";quote.classList.add("show");hint.textContent="el universo continúa vivo"}
+}
+function next(){if(mode<7)setMode(mode+1)}
+function pointer(e){
+ const r=c.getBoundingClientRect(),xx=e.clientX-r.left,yy=e.clientY-r.top;
+ mouse.vx=xx-lastMouse.x;mouse.vy=yy-lastMouse.y;mouse.x=xx;mouse.y=yy;lastMouse={x:xx,y:yy};
+ if(!running)return;
+ ripples.push({x:xx,y:yy,r:2,a:.32});
+ if(mode===1){burst(xx,yy,5,"dust");energy+=.12}
+ else if(mode===2){addSeed(xx,yy,3);energy+=.35}
+ else if(mode===3){grow(xx,yy,2)}
+ else if(mode===4){grow(xx,yy,3);addSeed(xx,yy,4)}
+ else if(mode===6){addPerson(xx,yy)}
+ else if(mode===7){burst(xx,yy,9,"gold")}
+}
+let drawing=false,pathStart=null;
+c.addEventListener("pointerdown",e=>{pointer(e);if(mode===5){drawing=true;pathStart={x:mouse.x,y:mouse.y}}});
+c.addEventListener("pointermove",e=>{pointer(e);if(drawing&&mode===5&&pathStart&&Math.hypot(mouse.x-pathStart.x,mouse.y-pathStart.y)>90){addPath(pathStart,{x:mouse.x,y:mouse.y});pathStart={x:mouse.x,y:mouse.y}}});
+addEventListener("pointerup",()=>{if(drawing&&pathStart&&mode===5&&Math.hypot(mouse.x-pathStart.x,mouse.y-pathStart.y)>45)addPath(pathStart,{x:mouse.x,y:mouse.y});drawing=false;pathStart=null});
+c.addEventListener("click",()=>{if(running&&mode<7&&mode!==5)next()});
+document.querySelector("#start").onclick=()=>{
+ running=true;intro.classList.add("hide");stageEl.style.opacity=1;hint.style.opacity=1;restart.style.display="block";makeWind();makeWater();setMode(1);
+ setTimeout(()=>setMode(2),8500);setTimeout(()=>setMode(3),16500);setTimeout(()=>setMode(4),24500);setTimeout(()=>setMode(5),33500);setTimeout(()=>setMode(6),43500);setTimeout(()=>setMode(7),55500)
+};
 restart.onclick=()=>location.reload();
-c.addEventListener('click',()=>{if(started&&stage<7){timers.forEach(clearTimeout);advance()}});
 </script>
-</body></html>
+</body>
+</html>
